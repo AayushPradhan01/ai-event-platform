@@ -20,3 +20,17 @@ def root():
 
     # Return simple JSON response
     return {"message": "User Service is running"}
+
+
+
+# Import models and create tables
+# Import Base and engine
+from app.database.database import Base, engine
+
+# Import models (VERY IMPORTANT)
+from app.models import user_model
+
+
+print("🚀 Creating tables...")
+# Create tables in DB
+Base.metadata.create_all(bind=engine)

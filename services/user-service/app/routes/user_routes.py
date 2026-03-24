@@ -1,5 +1,7 @@
 # Import router and dependency tools
 from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from app.database.database import get_db
 
 # Import schemas
 from app.schemas.user_schema import UserRegister, UserLogin
@@ -21,17 +23,14 @@ router = APIRouter()
 
 # ================= REGISTER =================
 @router.post("/users/register")
-def register_user(user: UserRegister):
+def register_user(user: UserRegister, db: Session = Depends(get_db)):
     print("\n📥 Register API called")
 
-    # Create user
-    created_user = create_user(user.email, user.password)
-
-    print("✅ User registered successfully")
+    created_user = create_user(db, user.email, user.password)
 
     return {
         "message": "User created successfully",
-        "user": created_user
+        "user_email": created_user.email
     }
 
 
@@ -44,31 +43,21 @@ from fastapi import Depends
 
 
 @router.post("/users/login")
-def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
-    print("\n📥 Login API called (OAuth2 format)")
+def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    print("\n📥 Login API called")
 
-    # Extract email from "username" field
     email = form_data.username
     password = form_data.password
 
-    print(f"👉 Received login request for: {email}")
-
-    # Find user
-    db_user = get_user_by_email(email)
+    db_user = get_user_by_email(db, email)
 
     if not db_user:
-        print("❌ User not found")
         return {"error": "User not found"}
 
-    # Verify password
-    if not verify_password(password, db_user["password"]):
-        print("❌ Invalid password")
+    if not verify_password(password, db_user.password):
         return {"error": "Invalid password"}
 
-    # Generate token
     token = create_access_token({"sub": email})
-
-    print("✅ Login successful")
 
     return {
         "access_token": token,
