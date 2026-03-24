@@ -28,7 +28,14 @@ def register_user(user: UserRegister, db: Session = Depends(get_db)):
 
     created_user = create_user(db, user.email, user.password)
 
+    if not created_user:
+        return {
+            "success": False,
+            "message": "Email already registered"
+    }
+
     return {
+        "success": True,
         "message": "User created successfully",
         "user_email": created_user.email
     }
@@ -52,10 +59,10 @@ def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
     db_user = get_user_by_email(db, email)
 
     if not db_user:
-        return {"error": "User not found"}
+        return {"success": False, "message": "User not found"}
 
     if not verify_password(password, db_user.password):
-        return {"error": "Invalid password"}
+        return {"success": False, "message": "Invalid password"}
 
     token = create_access_token({"sub": email})
 

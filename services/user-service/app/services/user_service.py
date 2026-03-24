@@ -1,3 +1,5 @@
+from sqlalchemy.exc import IntegrityError
+
 # Import password hashing
 from passlib.context import CryptContext
 
@@ -36,27 +38,41 @@ def hash_password(password: str):
 def create_user(db: Session, email: str, password: str):
     print("👤 Creating user in database...")
 
+    # 🔍 Check if user already exists
+    existing_user = db.query(User).filter(User.email == email).first()
+
+    if existing_user:
+        print("❌ Email already registered")
+
+        # Return clean error instead of crashing
+        return None
+
     # Hash password
     hashed_password = hash_password(password)
 
-    # Create User object
+    # Create user object
     new_user = User(
         email=email,
         password=hashed_password
     )
 
-    # Add to DB
-    db.add(new_user)
+    try:
+        # Add to DB
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
 
-    # Commit changes
-    db.commit()
+        print("✅ User saved in database")
 
-    # Refresh to get updated data (like ID)
-    db.refresh(new_user)
+        return new_user
 
-    print("✅ User saved in database")
+    except IntegrityError:
+        # Rollback in case of DB failure
+        db.rollback()
 
-    return new_user
+        print("❌ Database error occurred")
+
+        return None
 
 
 # =========================
